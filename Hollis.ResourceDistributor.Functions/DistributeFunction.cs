@@ -1,4 +1,4 @@
-using Google.Protobuf.WellKnownTypes;
+using Hollis.ResourceDistributor.Functions.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -15,25 +15,38 @@ public class DistributeFunction(
     IOptions<AppConfig> appConfig,
     HttpClient httpClient)
 {
-    private readonly string route = nameof(GetResource).Replace("Get", string.Empty, StringComparison.OrdinalIgnoreCase) + "config/{code}";
+    const string Get = "get";
 
     [Function(nameof(GetResource))]
     public async Task<IActionResult> GetResource(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = route)] HttpRequest req,
-        string code)
+        [HttpTrigger(AuthorizationLevel.Anonymous, Get, Route = $"{nameof(Resource)}/{{id}}")]
+        HttpRequest req,
+        Guid id)
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(x => x.ClearTextKey == code);
-        if (user is null)
+        var resource = await dbContext.Resources
+            .FirstOrDefaultAsync(x => x.Id == id);
+        if (resource is null)
         {
             return new NotFoundResult();
         }
 
-        logger.LogInformation("User {name} from {city}({ip}) with code {code} request for config, accept.", user.IdentificationName, "city", "ip", user.ClearTextKey);
+        // auth
+        if (!resource.AllowAnymouse)
+        {
+            var userIdentify = req.Query["user"];
+            var user = await dbContext.Users
+                .FirstOrDefaultAsync(x => x.ClearTextKey == userIdentify);
+            if (user is null)
+            {
+                return new NotFoundResult();
+            }
+
+            logger.LogInformation("User {name} from {city}({ip}) with code {code} request for config, accept.", user.IdentificationName, "city", "ip", user.ClearTextKey);
+        }
 
         httpClient.DefaultRequestHeaders.Add("User-Agent", appConfig.Value.DefaultUserAgent);
 
-
-        var response = await httpClient.GetAsync(appConfig.Value.TargetUrl);
+        var response = await httpClient.GetAsync(resource.TargetUrl);
         var content = await response.Content.ReadAsStringAsync();
         if (response.StatusCode != HttpStatusCode.OK)
         {
