@@ -2,6 +2,7 @@ using Hollis.ResourceDistributor.Functions.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,16 +19,16 @@ public class DistributeFunction(
     const string Get = "get";
 
     [Function(nameof(GetResource))]
-    public async Task<IActionResult> GetResource(
+    public async Task<HttpResponseData> GetResource(
         [HttpTrigger(AuthorizationLevel.Anonymous, Get, Route = $"{nameof(Resource)}/{{id}}")]
-        HttpRequest req,
+        HttpRequestData req,
         Guid id)
     {
         var resource = await dbContext.Resources
             .FirstOrDefaultAsync(x => x.Id == id);
         if (resource is null)
         {
-            return new NotFoundResult();
+            return req.CreateResponse(HttpStatusCode.NotFound);
         }
 
         // auth
@@ -38,7 +39,7 @@ public class DistributeFunction(
                 .FirstOrDefaultAsync(x => x.ClearTextKey == userIdentify);
             if (user is null)
             {
-                return new NotFoundResult();
+                return req.CreateResponse(HttpStatusCode.NotFound);
             }
 
             logger.LogInformation("User {name} from {city}({ip}) with code {code} request for config, accept.", user.IdentificationName, "city", "ip", user.ClearTextKey);
@@ -57,6 +58,23 @@ public class DistributeFunction(
             logger.LogInformation("Fetch config success.");
         }
 
-        return new OkObjectResult(content);
+        // copy response headers
+        var result = req.CreateResponse(HttpStatusCode.OK);
+        foreach (var headerName in resource.ResponseCopyHeaderName)
+        {
+            if (!response.Headers.TryGetValues(headerName, out var headerValue))
+            {
+                continue;
+            }
+
+            if (result.Headers.Any(x => x.Key == headerName))
+            {
+                result.Headers.Remove(headerName);
+            }
+
+            result.Headers.Add(headerName, headerValue);
+        }
+
+        return result;
     }
 }
