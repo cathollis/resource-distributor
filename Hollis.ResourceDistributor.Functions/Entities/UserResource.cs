@@ -1,12 +1,14 @@
-﻿namespace Hollis.ResourceDistributor.Functions.Entities;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Hollis.ResourceDistributor.Functions.Entities;
 
 public class UserResource
 {
-    public Guid Id { get; init; }
+    public Guid Id { get; private set; } = Guid.NewGuid();
 
-    public Guid UserId { get; set; }
+    public required Guid UserId { get; init; }
 
-    public Guid ResourceId { get; set; }
+    public required Guid ResourceId { get; init; }
 
     public virtual User User { get; private set; } = null!;
 

@@ -4,7 +4,8 @@ namespace Hollis.ResourceDistributor.Functions.Entities;
 
 public class Resource
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    [Key]
+    public Guid Id { get; private set; } = Guid.NewGuid();
 
     [MaxLength(64)]
     public required string Name { get; set; }
@@ -13,6 +14,12 @@ public class Resource
 
     [MaxLength(128)]
     public required Uri TargetUrl { get; set; }
+
+    [MaxLength(2048)]
+    public List<string> RequestCopyHeaderName { get; private set; } = [];
+
+    [MaxLength(2048)]
+    public List<string> ResponseCopyHeaderName { get; private set; } = [];
 
     [MaxLength(512)]
     public string? Comment { get; set; }
