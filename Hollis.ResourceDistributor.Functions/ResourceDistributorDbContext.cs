@@ -15,15 +15,6 @@ public class ResourceDistributorDbContext(DbContextOptions<ResourceDistributorDb
         var schemaName = nameof(ResourceDistributorDbContext).Replace(nameof(DbContext), string.Empty);
         modelBuilder.HasDefaultSchema(schemaName);
 
-        modelBuilder.Entity<Resource>()
-            .OwnsOne(res => res.RequestCopyHeaderName, ownedNavigationBuilder =>
-            {
-                ownedNavigationBuilder.ToJson();
-            }).OwnsOne(res => res.ResponseCopyHeaderName, ownedNavigationBuilder =>
-            {
-                ownedNavigationBuilder.ToJson();
-            });
-
         base.OnModelCreating(modelBuilder);
     }
 }

@@ -17,9 +17,13 @@ builder.ConfigureFunctionsWebApplication();
 
 builder.Services.AddDbContext<ResourceDistributorDbContext>(options =>
 {
-
     var connectionString = Environment.GetEnvironmentVariable(string.Join("_", ["SQLCONNSTR", projectName]));
-    options.UseSqlServer(connectionString);
+    options.UseSqlServer(connectionString, sqlServer =>
+    {
+        sqlServer.MigrationsHistoryTable("__EFMigrationsHistory", projectName);
+    });
 });
+
+builder.Services.AddHttpClient();
 
 builder.Build().Run();

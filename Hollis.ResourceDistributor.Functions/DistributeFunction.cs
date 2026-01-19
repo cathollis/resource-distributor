@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net;
+using System.Text.Json;
 
 namespace Hollis.ResourceDistributor.Functions;
 
@@ -45,7 +46,8 @@ public class DistributeFunction(
             logger.LogInformation("User {name} from {city}({ip}) with code {code} request for config, accept.", user.IdentificationName, "city", "ip", user.ClearTextKey);
         }
 
-        httpClient.DefaultRequestHeaders.Add("User-Agent", appConfig.Value.DefaultUserAgent);
+        var defaultUserAgent = Environment.GetEnvironmentVariable("default_user_agent");
+        httpClient.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
 
         var response = await httpClient.GetAsync(resource.TargetUrl);
         var content = await response.Content.ReadAsStringAsync();

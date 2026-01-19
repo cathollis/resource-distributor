@@ -24,5 +24,5 @@ public class Resource
     [MaxLength(512)]
     public string? Comment { get; set; }
 
-    public virtual IList<User>? AllowUsers { get; set; }
+    public virtual IList<User>? AllowUsers { get; private set; } = [];
 }
