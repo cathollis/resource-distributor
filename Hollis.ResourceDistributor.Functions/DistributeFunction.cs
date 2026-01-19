@@ -47,12 +47,12 @@ public class DistributeFunction(
         }
 
         var defaultUserAgent = Environment.GetEnvironmentVariable("default_user_agent");
-        httpClient.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
+        httpClient.DefaultRequestHeaders.Add("User-Agent", "clash");
 
         var response = await httpClient.GetAsync(resource.TargetUrl);
-        var content = await response.Content.ReadAsStringAsync();
         if (response.StatusCode != HttpStatusCode.OK)
         {
+            var content = await response.Content.ReadAsStreamAsync();
             logger.LogError("Fetch failed, status:{code}, message: {msg}", response.StatusCode, content);
         }
         else
@@ -62,6 +62,7 @@ public class DistributeFunction(
 
         // copy response headers
         var result = req.CreateResponse(HttpStatusCode.OK);
+        await response.Content.CopyToAsync(result.Body);
         foreach (var headerName in resource.ResponseCopyHeaderName)
         {
             if (!response.Headers.TryGetValues(headerName, out var headerValue))
