@@ -3,7 +3,9 @@ using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
+var projectName = nameof(ResourceDistributorDbContext).Replace(nameof(DbContext), string.Empty);
 var builder = FunctionsApplication.CreateBuilder(args);
 
 builder.ConfigureFunctionsWebApplication();
@@ -13,9 +15,11 @@ builder.ConfigureFunctionsWebApplication();
 //     .AddApplicationInsightsTelemetryWorkerService()
 //     .ConfigureFunctionsApplicationInsights();
 
-builder.Services.AddDbContext<ResourceDistributorDbContext>(option =>
+builder.Services.AddDbContext<ResourceDistributorDbContext>(options =>
 {
-    option.UseSqlServer("");
+
+    var connectionString = Environment.GetEnvironmentVariable(string.Join("_", ["SQLCONNSTR", projectName]));
+    options.UseSqlServer(connectionString);
 });
 
 builder.Build().Run();
