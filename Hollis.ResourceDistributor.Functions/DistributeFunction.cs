@@ -14,8 +14,8 @@ namespace Hollis.ResourceDistributor.Functions;
 public class DistributeFunction(
     ILogger<DistributeFunction> logger,
     ResourceDistributorDbContext dbContext,
-    IOptions<AppConfig> appConfig,
-    HttpClient httpClient)
+    HttpClient httpClient,
+    IOptionsMonitor<AppConfig> appConfig)
 {
     const string Get = "get";
 
@@ -23,10 +23,11 @@ public class DistributeFunction(
     public async Task<HttpResponseData> GetResource(
         [HttpTrigger(AuthorizationLevel.Anonymous, Get, Route = $"{nameof(Resource)}/{{id}}")]
         HttpRequestData req,
-        Guid id)
+        Guid id,
+        CancellationToken cancellationToken)
     {
         var resource = await dbContext.Resources
-            .FirstOrDefaultAsync(x => x.Id == id);
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (resource is null)
         {
             return req.CreateResponse(HttpStatusCode.NotFound);
@@ -37,22 +38,27 @@ public class DistributeFunction(
         {
             var userIdentify = req.Query["user"];
             var user = await dbContext.Users
-                .FirstOrDefaultAsync(x => x.ClearTextKey == userIdentify);
+                .FirstOrDefaultAsync(x => x.ClearTextKey == userIdentify, cancellationToken);
             if (user is null)
             {
+                logger.LogWarning("User from {city}({ip}) with wrong key {key} request for resource {rid}, accept.", "city", "ip", userIdentify, resource.Id);
                 return req.CreateResponse(HttpStatusCode.NotFound);
             }
 
-            logger.LogInformation("User {name} from {city}({ip}) with code {code} request for config, accept.", user.IdentificationName, "city", "ip", user.ClearTextKey);
+            logger.LogInformation("User {name} from {city}({ip}) request for resource {rid}, accept.", user.IdentificationName, "city", "ip", resource.Id);
+        }
+        else
+        {
+            logger.LogInformation("User from {city}({ip}) request anymouse resource {rid}, accpet.", "city", "ip", resource.Id);
         }
 
         var defaultUserAgent = Environment.GetEnvironmentVariable("default_user_agent");
-        httpClient.DefaultRequestHeaders.Add("User-Agent", "clash");
+        httpClient.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
 
-        var response = await httpClient.GetAsync(resource.TargetUrl);
+        var response = await httpClient.GetAsync(resource.TargetUrl, cancellationToken);
         if (response.StatusCode != HttpStatusCode.OK)
         {
-            var content = await response.Content.ReadAsStreamAsync();
+            var content = await response.Content.ReadAsStreamAsync(cancellationToken);
             logger.LogError("Fetch failed, status:{code}, message: {msg}", response.StatusCode, content);
         }
         else
@@ -60,11 +66,13 @@ public class DistributeFunction(
             logger.LogInformation("Fetch config success.");
         }
 
-        // copy response headers
         var result = req.CreateResponse(HttpStatusCode.OK);
-        await response.Content.CopyToAsync(result.Body);
+        var responseTask = response.Content.CopyToAsync(result.Body, cancellationToken);
+
+        // copy response headers
         foreach (var headerName in resource.ResponseCopyHeaderName)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!response.Headers.TryGetValues(headerName, out var headerValue))
             {
                 continue;
@@ -78,6 +86,7 @@ public class DistributeFunction(
             result.Headers.Add(headerName, headerValue);
         }
 
+        await responseTask;
         return result;
     }
 }
