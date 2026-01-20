@@ -26,6 +26,6 @@ builder.Services.AddDbContext<ResourceDistributorDbContext>(options =>
 
 builder.Services.AddHttpClient();
 
-builder.Services.Configure<AppConfig>(builder.Configuration.GetSection(nameof(AppConfig));
+builder.Services.Configure<AppConfig>(builder.Configuration.GetSection(nameof(AppConfig)));
 
 builder.Build().Run();
