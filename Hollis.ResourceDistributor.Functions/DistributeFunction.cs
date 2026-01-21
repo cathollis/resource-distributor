@@ -52,14 +52,15 @@ public class DistributeFunction(
             logger.LogInformation("User from {city}({ip}) request anymouse resource {rid}, accpet.", "city", "ip", resource.Id);
         }
 
+        // copy request header
         var defaultUserAgent = Environment.GetEnvironmentVariable("default_user_agent");
         httpClient.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
 
-        var response = await httpClient.GetAsync(resource.TargetUrl, cancellationToken);
-        if (response.StatusCode != HttpStatusCode.OK)
+        var rescourResponse = await httpClient.GetAsync(resource.TargetUrl, cancellationToken);
+        if (rescourResponse.StatusCode != HttpStatusCode.OK)
         {
-            var content = await response.Content.ReadAsStreamAsync(cancellationToken);
-            logger.LogError("Fetch failed, status:{code}, message: {msg}", response.StatusCode, content);
+            var content = await rescourResponse.Content.ReadAsStringAsync(cancellationToken);
+            logger.LogError("Fetch failed, status:{code}, message: {msg}", rescourResponse.StatusCode, content);
         }
         else
         {
@@ -67,13 +68,12 @@ public class DistributeFunction(
         }
 
         var result = req.CreateResponse(HttpStatusCode.OK);
-        var responseTask = response.Content.CopyToAsync(result.Body, cancellationToken);
 
         // copy response headers
         foreach (var headerName in resource.ResponseCopyHeaderName)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (!response.Headers.TryGetValues(headerName, out var headerValue))
+            if (!rescourResponse.Headers.TryGetValues(headerName, out var headerValue))
             {
                 continue;
             }
@@ -86,7 +86,7 @@ public class DistributeFunction(
             result.Headers.Add(headerName, headerValue);
         }
 
-        await responseTask;
+        await rescourResponse.Content.CopyToAsync(result.Body, cancellationToken); ;
         return result;
     }
 }
