@@ -37,7 +37,7 @@ public class DistributeFunction(
 
         foreach (var h in req.Headers)
         {
-            logger.LogInformation("Req hdr: `{j}`", JsonSerializer.Serialize(h.Value));
+            logger.LogInformation("Req hdr {h}: `{j}`", h.Key, JsonSerializer.Serialize(h.Value));
         }
 
         // ip audit log
@@ -102,7 +102,7 @@ public class DistributeFunction(
             result.Headers.Add(headerName, headerValue);
         }
 
-        await rescourResponse.Content.CopyToAsync(result.Body, cancellationToken); 
+        await rescourResponse.Content.CopyToAsync(result.Body, cancellationToken);
         return result;
     }
 }
