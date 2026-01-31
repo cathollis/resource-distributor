@@ -35,11 +35,6 @@ public class DistributeFunction(
             return req.CreateResponse(HttpStatusCode.NotFound);
         }
 
-        foreach (var h in req.Headers)
-        {
-            logger.LogInformation("Req hdr {h}: `{j}`", h.Key, JsonSerializer.Serialize(h.Value));
-        }
-
         // ip audit log
         string? userIp = null;
         GeoLocationResponse? userGeoInfo = null;
@@ -57,7 +52,7 @@ public class DistributeFunction(
         // get geo location
         if (!string.IsNullOrWhiteSpace(userIp))
         {
-            userGeoInfo = await locationApi.FetchGeoLocationAsync(new() { Ip = userIp });
+            userGeoInfo = await locationApi.FetchGeoLocationAsync(userIp);
         }
 
         // auth

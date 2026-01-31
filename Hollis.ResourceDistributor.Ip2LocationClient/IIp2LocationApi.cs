@@ -8,5 +8,5 @@ public interface IIp2LocationApi
     private const string GeoLocationPath = "/";
 
     [Get(GeoLocationPath)]
-    Task<GeoLocationResponse> FetchGeoLocationAsync([Query] GeoLocationRequest request);
+    Task<GeoLocationResponse> FetchGeoLocationAsync([Query] string ip);
 }
