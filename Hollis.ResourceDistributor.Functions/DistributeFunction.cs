@@ -1,21 +1,22 @@
+using Hollis.ResourceDistributor.Functions.Configs;
 using Hollis.ResourceDistributor.Functions.Entities;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+using Hollis.ResourceDistributor.Ip2LocationClient;
+using Hollis.ResourceDistributor.Ip2LocationClient.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net;
-using System.Text.Json;
 
 namespace Hollis.ResourceDistributor.Functions;
 
 public class DistributeFunction(
+    IOptionsMonitor<AppConfig> appConfig,
     ILogger<DistributeFunction> logger,
     ResourceDistributorDbContext dbContext,
-    HttpClient httpClient,
-    IOptionsMonitor<AppConfig> appConfig)
+    IIp2LocationApi locationApi,
+    HttpClient httpClient)
 {
     const string Get = "get";
 
@@ -33,6 +34,16 @@ public class DistributeFunction(
             return req.CreateResponse(HttpStatusCode.NotFound);
         }
 
+        // ip audit log
+        req.Headers.TryGetValues("X-Real-IP", out var userIpList);
+        var userIp = userIpList?.FirstOrDefault();
+
+        GeoLocationResponse? userGeoInfo = null;
+        if (!string.IsNullOrWhiteSpace(userIp))
+        {
+            userGeoInfo = await locationApi.FetchGeoLocationAsync(new() { Ip = userIp });
+        }
+
         // auth
         if (!resource.AllowAnymouse)
         {
@@ -41,20 +52,19 @@ public class DistributeFunction(
                 .FirstOrDefaultAsync(x => x.ClearTextKey == userIdentify, cancellationToken);
             if (user is null)
             {
-                logger.LogWarning("User from {city}({ip}) with wrong key {key} request for resource {rid}, accept.", "city", "ip", userIdentify, resource.Id);
+                logger.LogWarning("User from {city}({ip}) with wrong key {key} request for resource {rid}, reject.", userGeoInfo?.CityName, userGeoInfo?.Ip, userIdentify, resource.Id);
                 return req.CreateResponse(HttpStatusCode.NotFound);
             }
 
-            logger.LogInformation("User {name} from {city}({ip}) request for resource {rid}, accept.", user.IdentificationName, "city", "ip", resource.Id);
+            logger.LogInformation("User {name} from {city}({ip}) request for resource {rid}, accept.", user.IdentificationName, userGeoInfo?.CityName, userGeoInfo?.Ip, resource.Id);
         }
         else
         {
-            logger.LogInformation("User from {city}({ip}) request anymouse resource {rid}, accpet.", "city", "ip", resource.Id);
+            logger.LogInformation("User from {city}({ip}) request anymouse resource {rid}, accpet.", userGeoInfo?.CityName, userGeoInfo?.Ip, resource.Id);
         }
 
         // copy request header
-        var defaultUserAgent = Environment.GetEnvironmentVariable("default_user_agent");
-        httpClient.DefaultRequestHeaders.Add("User-Agent", defaultUserAgent);
+        httpClient.DefaultRequestHeaders.Add("User-Agent", appConfig.CurrentValue.DefaultUserAgent);
 
         var rescourResponse = await httpClient.GetAsync(resource.TargetUrl, cancellationToken);
         if (rescourResponse.StatusCode != HttpStatusCode.OK)
@@ -86,7 +96,7 @@ public class DistributeFunction(
             result.Headers.Add(headerName, headerValue);
         }
 
-        await rescourResponse.Content.CopyToAsync(result.Body, cancellationToken); ;
+        await rescourResponse.Content.CopyToAsync(result.Body, cancellationToken); 
         return result;
     }
 }

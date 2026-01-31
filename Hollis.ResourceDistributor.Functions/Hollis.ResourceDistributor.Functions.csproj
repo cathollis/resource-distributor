@@ -21,6 +21,9 @@
 	<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.23" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Hollis.ResourceDistributor.Ip2LocationClient\Hollis.ResourceDistributor.Ip2LocationClient.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <None Update="host.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

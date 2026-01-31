@@ -1,4 +1,4 @@
-﻿namespace Hollis.ResourceDistributor.Functions;
+﻿namespace Hollis.ResourceDistributor.Functions.Configs;
 
 public class AppConfig
 {
