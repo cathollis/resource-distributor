@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="./Hollis.ResourceDistributor.Ip2LocationClient/Hollis.ResourceDistributor.Ip2LocationClient.csproj" Id="6608f49a-9908-4cd2-a8c3-f8cdd31f322e" />
+  <Project Path="./Hollis.ResourceDistributor.Functions/Hollis.ResourceDistributor.Functions.csproj" />
+</Solution>
