@@ -41,10 +41,20 @@ public class DistributeFunction(
         }
 
         // ip audit log
-        req.Headers.TryGetValues("X-Forwarded-For", out var userIpList);
-        var userIp = userIpList?.FirstOrDefault();
-
+        string? userIp = null;
         GeoLocationResponse? userGeoInfo = null;
+
+        // get ip
+        req.Headers.TryGetValues("CLIENT-IP", out var userIpList);
+        if (userIpList?.Any() ?? false)
+        {
+            if (IPEndPoint.TryParse(userIpList.First(), out var ip))
+            {
+                userIp = ip.Address.ToString();
+            }
+        }
+
+        // get geo location
         if (!string.IsNullOrWhiteSpace(userIp))
         {
             userGeoInfo = await locationApi.FetchGeoLocationAsync(new() { Ip = userIp });
