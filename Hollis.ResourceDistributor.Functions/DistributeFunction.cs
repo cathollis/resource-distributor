@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net;
+using System.Text.Json;
 
 namespace Hollis.ResourceDistributor.Functions;
 
@@ -34,8 +35,13 @@ public class DistributeFunction(
             return req.CreateResponse(HttpStatusCode.NotFound);
         }
 
+        foreach (var h in req.Headers)
+        {
+            logger.LogInformation("Req hdr: `{j}`", JsonSerializer.Serialize(h.Value));
+        }
+
         // ip audit log
-        req.Headers.TryGetValues("X-Real-IP", out var userIpList);
+        req.Headers.TryGetValues("X-Forwarded-For", out var userIpList);
         var userIp = userIpList?.FirstOrDefault();
 
         GeoLocationResponse? userGeoInfo = null;
