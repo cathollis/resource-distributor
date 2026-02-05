@@ -23,9 +23,10 @@ public class DistributeFunction(
 
     [Function(nameof(GetResource))]
     public async Task<HttpResponseData> GetResource(
-        [HttpTrigger(AuthorizationLevel.Anonymous, Get, Route = $"{nameof(Resource)}/{{id}}")]
+        [HttpTrigger(AuthorizationLevel.Anonymous, Get, Route = $"{nameof(Resource)}/{{{nameof(id)}:{nameof(Guid)}}}/**{{{nameof(route)}}}")]
         HttpRequestData req,
         Guid id,
+        string route,
         CancellationToken cancellationToken)
     {
         var resource = await dbContext.Resources
@@ -77,7 +78,7 @@ public class DistributeFunction(
         // copy request header
         httpClient.DefaultRequestHeaders.Add("User-Agent", appConfig.CurrentValue.DefaultUserAgent);
 
-        var rescourResponse = await httpClient.GetAsync(resource.TargetUrl, cancellationToken);
+        var rescourResponse = await httpClient.GetAsync(new Uri(resource.TargetUrl, route), cancellationToken);
         if (rescourResponse.StatusCode != HttpStatusCode.OK)
         {
             var content = await rescourResponse.Content.ReadAsStringAsync(cancellationToken);
